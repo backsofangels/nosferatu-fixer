@@ -1,6 +1,6 @@
 # Core Utilities Reference
 
-Detailed documentation of utility functions in `toc_fixer/core/utils.py`.
+Detailed documentation of utility functions in `nosferatu-fixer/core/utils.py`.
 
 ## 🔍 EPUB Path Resolution (BUG-1 Fix)
 

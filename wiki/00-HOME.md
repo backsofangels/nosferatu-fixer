@@ -43,24 +43,34 @@ Welcome to the TOC Fixer technical documentation. This wiki provides detailed te
 ## 🏗️ Project Structure
 
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── main.py                    # CLI entry point
-├── toc_fixer/                 # Main package
+├── nosferatu-fixer/                 # Main package
+│   ├── __init__.py
+│   ├── batch_processor.py     # Batch processing logic
 │   ├── core/
-│   │   ├── models.py         # TocEntry, SpineItem, PipelineReport
-│   │   ├── utils.py          # ZIP/EPUB utilities (bug fixes)
-│   │   └── file_manager.py   # File tracking and cleanup
+│   │   ├── __init__.py
+│   │   ├── models.py          # TocEntry, SpineItem, PipelineReport
+│   │   ├── utils.py           # ZIP/EPUB utilities (BUG fixes 1-3)
+│   │   ├── epub_utils.py      # EPUB format utilities
+│   │   ├── se_tools.py        # Standard Ebooks tool wrappers
+│   │   ├── file_manager.py    # File tracking and cleanup
+│   │   ├── phase_base.py      # Base class for phases
+│   │   ├── profiler.py        # Performance profiling
+│   │   └── performance_optimization.py  # Optimization utilities
 │   └── pipeline/
-│       ├── phase0.py         # Diagnosis
-│       ├── phase1.py         # HTML cleanup
-│       ├── phase2.py         # Semantic upgrade
-│       ├── phase3.py         # Spine realignment
-│       ├── phase4.py         # TOC rebuild
-│       ├── phase5.py         # Typography
-│       ├── phase6.py         # CSS rewrite
-│       └── phase7.py         # Validation
+│       ├── __init__.py
+│       ├── phase0.py          # Phase 0: Diagnosis ✅
+│       ├── phase1.py          # Phase 1: HTML cleanup ✅
+│       ├── phase2.py          # Phase 2: Semantic upgrade ✅
+│       ├── phase3.py          # Phase 3: Spine realignment ✅
+│       ├── phase4.py          # Phase 4: TOC rebuild ✅
+│       ├── phase5.py          # Phase 5: Typography ✅
+│       ├── phase6.py          # Phase 6: CSS rewrite ✅
+│       └── phase7.py          # Phase 7: Validation ✅
 ├── wiki/                      # This documentation
-└── [README, PLAN, AGENTS]
+├── reports/                   # JSON reports from phase runs
+└── [README, AGENTS, LICENSE]
 ```
 
 ## 🔑 Key Concepts
@@ -167,4 +177,4 @@ python main.py wild.epub --ground-truth master.epub --json-reports
 
 ---
 
-**Last Updated**: April 2026 | **Status**: Production Ready | **Contributors**: Welcome!
+**Last Updated**: April 2026 | **Status**: Alpha | **Contributors**: Welcome!

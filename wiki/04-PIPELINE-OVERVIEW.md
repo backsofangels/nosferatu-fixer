@@ -9,7 +9,7 @@ Every phase follows the same structure for consistency and robustness.
 ### Standard Phase Template
 
 ```python
-# toc_fixer/pipeline/phaseN.py
+# nosferatu-fixer/pipeline/phaseN.py
 
 import subprocess
 from pathlib import Path

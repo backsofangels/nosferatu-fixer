@@ -2,14 +2,14 @@
 
 Complete API documentation for TOC Fixer modules.
 
-## 📦 toc_fixer.core
+## 📦 nosferatu-fixer.core
 
 Core utilities and data models.
 
 ### models
 
 ```python
-from toc_fixer.core.models import TocEntry, SpineItem, PipelineReport
+from nosferatu-fixer.core.models import TocEntry, SpineItem, PipelineReport
 
 class TocEntry:
     """Table of contents entry"""
@@ -44,7 +44,7 @@ See [Data Models](13-DATA-MODELS.md) for detailed documentation.
 ### utils
 
 ```python
-from toc_fixer.core.utils import (
+from nosferatu-fixer.core.utils import (
     resolve_ncx_path,
     parse_ncx_entries,
     build_zip_key,
@@ -73,7 +73,7 @@ See [Core Utilities](02-CORE-UTILITIES.md) for detailed documentation.
 ### file_manager
 
 ```python
-from toc_fixer.core.file_manager import FileManager, PipelineFileTracker
+from nosferatu-fixer.core.file_manager import FileManager, PipelineFileTracker
 
 class FileManager:
     """Manage file lifecycle and cleanup"""
@@ -92,14 +92,14 @@ See [File Manager](03-FILE-MANAGER.md) for detailed documentation.
 
 ---
 
-## 📦 toc_fixer.pipeline
+## 📦 nosferatu-fixer.pipeline
 
 Phase implementations.
 
 ```python
-from toc_fixer.pipeline.phase0 import run_phase0
-from toc_fixer.pipeline.phase1 import run_phase1
-from toc_fixer.pipeline.phase2 import run_phase2
+from nosferatu-fixer.pipeline.phase0 import run_phase0
+from nosferatu-fixer.pipeline.phase1 import run_phase1
+from nosferatu-fixer.pipeline.phase2 import run_phase2
 # ... phase3 through phase7
 
 def run_phaseN(epub_path: str, output_path: str, report: PipelineReport) -> bool:

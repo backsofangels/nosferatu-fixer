@@ -9,13 +9,19 @@ All 7 pipeline phases fully implemented and tested. Full test coverage, performa
 ```
 nosferatu-fixer/
 ├── main.py                              # CLI entry point
-├── nosferatu-fixer/                           # Main package
+├── nosferatu-fixer/                     # Main package
 │   ├── __init__.py
+│   ├── batch_processor.py               # Batch processing for multiple EPUBs
 │   ├── core/                            # Core utilities and models
 │   │   ├── __init__.py
 │   │   ├── models.py                   # TocEntry, SpineItem, PipelineReport
 │   │   ├── utils.py                    # ZIP access, parsing (BUG fixes 1-3)
-│   │   └── file_manager.py             # File tracking and cleanup
+│   │   ├── epub_utils.py               # EPUB format utilities
+│   │   ├── se_tools.py                 # Standard Ebooks tool wrappers
+│   │   ├── file_manager.py             # File tracking and cleanup
+│   │   ├── phase_base.py               # Base class for phases
+│   │   ├── profiler.py                 # Performance profiling
+│   │   └── performance_optimization.py # Optimization utilities
 │   └── pipeline/                        # Phase implementations
 │       ├── __init__.py
 │       ├── phase0.py                   # Phase 0: Diagnosis ✅
@@ -28,18 +34,19 @@ nosferatu-fixer/
 │       └── phase7.py                   # Phase 7: Validation ✅
 ├── README.md                            # GitHub-ready documentation
 ├── AGENTS.md                            # This file
+└── [LICENSE, wiki/, reports/]
 ```
 
 ## Import Conventions
 
 ```python
 # From CLI (main.py):
-from toc_fixer.pipeline import run_phase0, run_phase1, ..., run_phase7
-from toc_fixer.core import TocEntry, SpineItem, PipelineReport
+from nosferatu_fixer.pipeline import run_phase0, run_phase1, ..., run_phase7
+from nosferatu_fixer.core import TocEntry, SpineItem, PipelineReport
 
 # From Phase implementation:
 from ..core import PipelineReport, build_zip_key, safe_read
-from toc_fixer.core.file_manager import PipelineFileTracker
+from nosferatu_fixer.core.file_manager import PipelineFileTracker
 ```
 
 ## Project Overview

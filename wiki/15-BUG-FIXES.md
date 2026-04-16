@@ -9,7 +9,7 @@ Five critical bugs have been identified and fixed across the pipeline. These are
 ### **Category 1: Core EPUB Handling (BUG-1, BUG-2, BUG-3)**
 - Impact: File parsing, data extraction
 - Severity: Critical—affect all EPUBs
-- Status: ✅ Fixed in toc_fixer/core/utils.py
+- Status: ✅ Fixed in nosferatu-fixer/core/utils.py
 
 ### **Category 2: File Corruption (BUG-4, BUG-5)**
 - Impact: Output file integrity
@@ -52,7 +52,7 @@ Correct path: `zip.read("OEBPS/toc.ncx")`
 
 ### Solution
 
-**Function**: `resolve_ncx_path()` in toc_fixer/core/utils.py
+**Function**: `resolve_ncx_path()` in nosferatu-fixer/core/utils.py
 
 3-method fallback with increasing specificity:
 
@@ -117,7 +117,7 @@ for name in zip_file.namelist():
 # All three test EPUBs should resolve NCX paths
 python -c "
 from zipfile import ZipFile
-from toc_fixer.core.utils import resolve_ncx_path
+from nosferatu_fixer.core.utils import resolve_ncx_path
 from lxml import etree
 
 for epub in ['around-the-world.epub', 'lovecraft.epub', 'jules-verne.epub']:
@@ -173,7 +173,7 @@ BeautifulSoup's HTML parser **strips XML namespaces** by default.
 
 ### Solution
 
-**Function**: `parse_ncx_entries()` in toc_fixer/core/utils.py
+**Function**: `parse_ncx_entries()` in nosferatu-fixer/core/utils.py
 
 Use **lxml with namespace support**:
 
@@ -226,7 +226,6 @@ def parse_ncx_entries(ncx_bytes) -> List[TocEntry]:
 ```bash
 # Test NCX parsing
 python -c "
-from zipfile import ZipFile
 from toc_fixer.core.utils import parse_ncx_entries
 
 with ZipFile('around-the-world.epub') as z:
@@ -349,7 +348,7 @@ def safe_read(z: ZipFile, zip_key: str) -> bytes | None:
 ```bash
 # Test ZIP key resolution
 python -c "
-from toc_fixer.core.utils import build_zip_key
+from nosferatu_fixer.core.utils import build_zip_key
 
 tests = [
     ('OEBPS', 'c01.html', 'OEBPS/c01.html'),
@@ -365,7 +364,7 @@ for opf_base, href, expected in tests:
 
 # Test parser selection
 python -c "
-from toc_fixer.core.utils import select_parser
+from nosferatu_fixer.core.utils import select_parser
 
 assert select_parser('file.html') == 'lxml'
 assert select_parser('file.xhtml') == 'lxml-xml'
@@ -424,7 +423,7 @@ class Phase6CSSRewriter:
 
 ```python
 # In main.py:
-from toc_fixer.pipeline.phase6 import run_phase6
+from nosferatu_fixer.pipeline.phase6 import run_phase6
 
 output_epub = str(tmp_dir / f"{stem}_p6.epub")
 success = run_phase6(input_epub, output_epub, report)

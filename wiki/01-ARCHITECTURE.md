@@ -24,7 +24,7 @@ Output + Reports
 
 ## 📦 Core Components
 
-### 1. **Core Package** (`toc_fixer/core/`)
+### 1. **Core Package** (`nosferatu-fixer/core/`)
 
 #### **models.py**
 Data structures shared across all phases:
@@ -44,16 +44,47 @@ Critical EPUB utilities with bug fixes:
 
 See [Core Utilities](02-CORE-UTILITIES.md) for detailed documentation.
 
+#### **epub_utils.py**
+EPUB format utilities:
+- EPUB ZIP extraction and manipulation
+- Container/metadata parsing
+- Manifest and spine operations
+
+#### **se_tools.py**
+Standard Ebooks tool integration:
+- Subprocess wrappers for SE tools
+- Fallback handling and error management
+- Tool availability detection
+
 #### **file_manager.py**
 File lifecycle management:
 - `FileManager` — Entry point tracking
 - `PipelineFileTracker` — Phase output tracking
+- `BatchResult` — Batch processing results
 - Auto-cleanup in normal mode
 - Debug mode preservation
 
 See [File Manager](03-FILE-MANAGER.md) for detailed documentation.
 
-### 2. **Pipeline Package** (`toc_fixer/pipeline/`)
+#### **phase_base.py**
+Base class for all phase implementations:
+- Common phase interface
+- Error handling patterns
+- Logging and reporting
+
+#### **profiler.py**
+Performance profiling utilities:
+- Memory tracking
+- Execution time measurement
+- Resource monitoring
+
+#### **performance_optimization.py**
+Optimization utilities:
+- Performance analysis tools
+- Bottleneck identification
+- Optimization recommendations
+
+### 2. **Pipeline Package** (`nosferatu-fixer/pipeline/`)
 
 7 independent phase implementations:
 

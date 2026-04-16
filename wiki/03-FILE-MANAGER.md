@@ -2,6 +2,13 @@
 
 Comprehensive guide to file lifecycle management in TOC Fixer.
 
+## 🆕 Batch Processing Support
+
+The file manager now supports batch processing of multiple EPUBs:
+- `BatchResult` — Results for individual EPUB processing
+- `BatchProcessor` — Main batch orchestration
+- Batch report generation with summary statistics
+
 ## 🎯 Purpose
 
 The file manager system provides:

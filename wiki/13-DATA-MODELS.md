@@ -4,7 +4,7 @@ Complete documentation of all data structures used throughout TOC Fixer.
 
 ## 📦 Core Models
 
-All models defined in `toc_fixer/core/models.py`
+All models defined in `nosferatu-fixer/core/models.py`
 
 ---
 

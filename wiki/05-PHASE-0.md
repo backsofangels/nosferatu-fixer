@@ -19,7 +19,7 @@ Phase 0 is the foundation of the pipeline. It:
 
 ## 📚 Implementation
 
-Located in `toc_fixer/pipeline/phase0.py`
+Located in `nosferatu-fixer/pipeline/phase0.py`
 
 ### Class: Phase0Analyzer
 
