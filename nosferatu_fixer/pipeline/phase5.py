@@ -40,6 +40,10 @@ class Phase5Typogrifier(EPUBPhaseBase):
             for xhtml_path in spine_files:
                 self._typogrify_file(xhtml_path)
             
+            # Repack and save the modified EPUB
+            if output_path:
+                return self._repack_and_save(output_path)
+            
             return True
         
         except Exception as e:

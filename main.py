@@ -18,10 +18,10 @@ import argparse
 import sys
 from pathlib import Path
 
-from toc_fixer.core import PipelineReport
-from toc_fixer.core.file_manager import PipelineFileTracker
-from toc_fixer.batch_processor import BatchProcessor
-from toc_fixer.pipeline import (
+from nosferatu_fixer.core import PipelineReport
+from nosferatu_fixer.core.file_manager import PipelineFileTracker
+from nosferatu_fixer.batch_processor import BatchProcessor
+from nosferatu_fixer.pipeline import (
     run_phase0, run_phase1, run_phase2, run_phase3, run_phase4, run_phase5,
     run_phase6, run_phase7
 )
