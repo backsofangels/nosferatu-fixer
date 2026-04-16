@@ -1,0 +1,8 @@
+internal-docs/
+*.json
+*.epub
+*.ps1
+
+.venv
+__pycache__/
+reports/
