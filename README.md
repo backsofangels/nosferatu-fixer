@@ -423,8 +423,6 @@ nosferatu-fixer/
 │       └── phase7.py               # Validation ✅
 ├── README.md                        # This file
 ├── AGENTS.md                        # Development guide & architecture
-├── PLAN.md                          # Full technical specification
-├── BUG_FIX_SUMMARY.md              # Detailed bug fix analysis
 └── [test EPUBs]
 ```
 
@@ -483,8 +481,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 For issues, questions, or suggestions:
 
 1. **Check** [AGENTS.md](AGENTS.md) for development guide and troubleshooting
-2. **Review** [PLAN.md](PLAN.md) for technical specifications
-3. **Open** an issue on GitHub with test EPUB and error logs
+2. **Open** an issue on GitHub with test EPUB and error logs
 
 ---
 
@@ -507,7 +504,6 @@ For issues, questions, or suggestions:
 
 ## 📚 References
 
-- **PLAN.md** — Complete technical specification for all 8 phases
 - **AGENTS.md** — Development guidelines and implementation notes
 - [Standard Ebooks Tools](https://github.com/standardebooks/tools) — MIT licensed
 - [SE Manual of Style](https://standardebooks.org/manual/latest/single-page)
