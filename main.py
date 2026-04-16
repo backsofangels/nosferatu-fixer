@@ -20,6 +20,7 @@ from pathlib import Path
 
 from toc_fixer.core import PipelineReport
 from toc_fixer.core.file_manager import PipelineFileTracker
+from toc_fixer.batch_processor import BatchProcessor
 from toc_fixer.pipeline import (
     run_phase0, run_phase1, run_phase2, run_phase3, run_phase4, run_phase5,
     run_phase6, run_phase7
@@ -33,7 +34,9 @@ def main():
     
     parser.add_argument(
         "epub",
-        help="Path to input EPUB file"
+        nargs="?",
+        default=None,
+        help="Path to input EPUB file (or use --batch-input for batch processing)"
     )
     
     parser.add_argument(
@@ -104,12 +107,69 @@ def main():
     )
     
     parser.add_argument(
+        "--batch-input",
+        default=None,
+        help="Batch mode: directory containing EPUBs to process (preserves directory structure)"
+    )
+    
+    parser.add_argument(
+        "--batch-output",
+        default=None,
+        help="Batch mode: directory where cleaned EPUBs will be saved"
+    )
+    
+    parser.add_argument(
+        "--batch-report",
+        action="store_true",
+        help="Generate batch_report.json with processing results"
+    )
+    
+    parser.add_argument(
         "--keep-toc-format",
         action="store_true",
         help="Keep original TOC format (NCX for EPUB2, nav.xhtml for EPUB3) instead of regenerating both"
     )
     
     args = parser.parse_args()
+    
+    # ========== BATCH MODE ==========
+    if args.batch_input:
+        if not args.batch_output:
+            print("Error: --batch-output required when using --batch-input", file=sys.stderr)
+            sys.exit(1)
+        
+        try:
+            processor = BatchProcessor(
+                input_dir=Path(args.batch_input),
+                output_dir=Path(args.batch_output),
+                phases=args.phases,
+                realign_spine=args.realign_spine,
+                json_reports=args.json_reports,
+                verbose=args.verbose
+            )
+            
+            # Process all EPUBs
+            batch_report = processor.process_batch()
+            
+            # Print summary
+            processor.print_summary()
+            
+            # Save report if requested
+            if args.batch_report:
+                report_file = processor.save_batch_report()
+                print(f"\nBatch report saved to: {report_file}")
+            
+            # Exit with success
+            sys.exit(0)
+        
+        except Exception as e:
+            print(f"Error: Batch processing failed: {e}", file=sys.stderr)
+            sys.exit(1)
+    
+    # ========== SINGLE FILE MODE ==========
+    if not args.epub:
+        print("Error: Must provide EPUB file or use --batch-input", file=sys.stderr)
+        sys.exit(1)
     
     # Validate input file
     epub_path = Path(args.epub)

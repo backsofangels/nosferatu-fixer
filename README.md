@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Production Ready](https://img.shields.io/badge/status-production%20ready-brightgreen)](https://github.com/backs/toc-fixer)
+[![Status: Production Ready](https://img.shields.io/badge/status-alpha-orange)](https://github.com/backsofangels/nosferatu-fixer)
 
 Transform "wild" EPUBs (Gutenberg/Calibre-generated) into clean, Standard Ebooks-quality EPUBs through a fully automated 7-phase pipeline.
 
@@ -50,8 +50,8 @@ Transform "wild" EPUBs (Gutenberg/Calibre-generated) into clean, Standard Ebooks
 
 ```bash
 # Clone the repository
-git clone https://github.com/backs/toc-fixer.git
-cd toc-fixer
+git clone https://github.com/backsofangels/nosferatu-fixer.git
+cd nosferatu-fixer
 
 # Create and activate virtual environment
 python -m venv .venv
@@ -67,9 +67,9 @@ pip install beautifulsoup4 lxml chardet
 
 ```bash
 # Transform wild EPUB to clean EPUB (all phases, auto cleanup)
-python main.py around-the-world.epub
+python main.py around-the-world-in-80-days.epub
 
-# Output: around-the-world_clean.epub (in current directory)
+# Output: around-the-world-in-80-days_clean.epub (in current directory)
 
 # Specify output path
 python main.py wild.epub --output result.epub
@@ -158,6 +158,35 @@ python main.py wild.epub --dry-run --verbose
 
 #### 8. **Full Validation Pipeline** (All options combined)
 ```bash
+python main.py wild.epub --realign-spine --json-reports --validate --epub2-compat
+# Runs: All phases + epubcheck + JSON debug reports
+```
+
+#### 9. **Batch Processing** (Directory of EPUBs → cleaned directory, preserves structure)
+```bash
+python main.py --batch-input ./ebooks/ --batch-output ./cleaned/
+# Processes all EPUBs in ./ebooks/ recursively
+# Results: ./cleaned/book1-cleaned.epub, ./cleaned/subdir/book2-cleaned.epub, etc.
+# Output structure mirrors input directory structure
+```
+
+#### 10. **Batch with Reporting** (Generate JSON summary)
+```bash
+python main.py --batch-input ./library/ --batch-output ./clean-library/ --batch-report
+# Results: 
+#   - clean-library/book1-cleaned.epub (and all books)
+#   - clean-library/batch_report.json (success rate, TOC entries per file)
+# Continues processing even if individual EPUBs fail
+```
+
+#### 11. **Batch with Custom Phases** (Only semantic + TOC rebuild on whole library)
+```bash
+python main.py --batch-input ./ebooks/ --batch-output ./out/ --phases 0,2,4,7
+# Runs: Diagnosis, semantic upgrade, TOC rebuild, validation only
+# Useful: Faster batch processing, skip HTML cleanup
+```
+
+```bash
 python main.py wild.epub \
   --validate \
   --json-reports \
@@ -187,7 +216,7 @@ python main.py wild.epub --epub2-compat --output legacy.epub
 Automatically organizes and cleans up intermediate files:
 
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── wild.epub              # Input (preserved)
 ├── wild_clean.epub        # Final output
 └── reports/
@@ -203,7 +232,7 @@ toc-fixer/
 Preserves all intermediate files for troubleshooting:
 
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── wild.epub              # Input (preserved)
 ├── wild_clean.epub        # Final output
 ├── tmp/                   # All phase outputs (preserved)
@@ -228,7 +257,7 @@ Reports use input EPUB name as prefix for easy identification:
 | **Phase 0** | `{input-name}_phase0_report.json` | Diagnosis (structure, quality, recommendations) |
 | **Phase 7** | `{input-name}_phase7_report.json` | Validation (lint errors, F1 score, warnings) |
 
-Example: `around-the-world.epub` → `around-the-world_phase0_report.json`, `around-the-world_phase7_report.json`
+Example: `around-the-world-in-80-days.epub` → `around-the-world-in-80-days_phase0_report.json`, `around-the-world-in-80-days_phase7_report.json`
 
 ## 📊 Pipeline Phases
 
@@ -301,8 +330,7 @@ Target: F1 ≥ 0.95 for high-quality transformations
 
 | EPUB | Source | Spine Items | Original TOC | Use Case |
 |------|--------|-------------|--------------|----------|
-| `around-the-world.epub` | Calibre | 42 | 40 NCX entries | Primary test |
-| `lovecraft.epub` | Gutenberg | 480+ | 425+ entries | Scalability test |
+| `around-the-world-in-80-days.epub` | Calibre | 42 | 40 NCX entries | Primary test |
 | `jules-verne_around-the-world-in-eighty-days_george-makepeace-towle.epub` | Standard Ebooks | 42 | 42 TOC entries | Ground truth |
 
 ### Benchmark Results
@@ -311,13 +339,13 @@ Target: F1 ≥ 0.95 for high-quality transformations
 |--------|-------|
 | Average execution time (full pipeline) | ~3.6 seconds |
 | File size ratio (output/input) | ~1.5x (due to compression) |
-| Heading detection accuracy | 92.5% (37/40 on around-the-world) |
+| Heading detection accuracy | 92.5% (37/40 on around-the-world-in-80-days) |
 | TOC rebuild F1 score | 0.97 (vs Standard Ebooks master) |
 | SE lint errors before | ~12 blocking |
 | SE lint errors after | 0 blocking |
 | Disk cleanup savings | ~95% (7 files → 2 files) |
 
-**Success Metrics** (around-the-world.epub):
+**Success Metrics** (around-the-world-in-80-days.epub):
 - ✅ `original_toc_entries: 40` → `rebuilt_toc_entries: 37`
 - ✅ `f1_score: 0.97` (against ground truth)
 - ✅ 0 blocking errors in `se lint` output
@@ -325,7 +353,7 @@ Target: F1 ≥ 0.95 for high-quality transformations
 
 ## 🐛 Bug Fixes
 
-All critical bugs fixed in production:
+Critical bugs fixed:
 
 | Bug | Issue | Fix |
 |-----|-------|-----|
@@ -335,7 +363,6 @@ All critical bugs fixed in production:
 | **BUG-4** | Phase 6 corrupts input file on failure | Fixed to write output to output_path, not input file |
 | **BUG-5** | Phase 3 had same corruption issue | Applied same fix as BUG-4 |
 
-See [BUG_FIX_SUMMARY.md](BUG_FIX_SUMMARY.md) for detailed analysis and code examples.
 
 ## 📊 JSON Reports
 
@@ -372,31 +399,10 @@ Validation output with quality metrics:
 
 Generate reports with `--json-reports` flag.
 
-## 🧪 Testing
-
-### Run with Reference EPUBs
-
-```bash
-# Wild input (Calibre-generated)
-python main.py around-the-world.epub
-
-# Wild input with ground truth scoring
-python main.py around-the-world.epub \
-  --ground-truth jules-verne_around-the-world-in-eighty-days_george-makepeace-towle.epub \
-  --json-reports \
-  --verbose
-```
-
-**Expected Results:**
-- Original TOC: 40 entries → Rebuilt TOC: ≥37 entries
-- F1 score: ≥0.95 (when ground truth available)
-- 0 blocking errors in `se lint` output
-- Execution time: <5 seconds
-
 ## 📁 Project Structure
 
-```
-toc-fixer/
+```plain
+nosferatu-fixer/
 ├── main.py                          # CLI entry point
 ├── toc_fixer/                       # Main package
 │   ├── __init__.py
@@ -459,12 +465,6 @@ Contributions welcome! Please:
 3. **Test** against included EPUBs
 4. **Submit** pull request with test results
 
-### Development Resources
-
-- [AGENTS.md](AGENTS.md) — Architecture guide, implementation details, troubleshooting
-- [PLAN.md](PLAN.md) — Full technical specification, data models, algorithms
-- [BUG_FIX_SUMMARY.md](BUG_FIX_SUMMARY.md) — Critical bug analysis and solutions
-
 ## 📄 License
 
 MIT License. See [LICENSE](LICENSE) for details.
@@ -488,12 +488,12 @@ For issues, questions, or suggestions:
 
 ---
 
-**Status**: Production Ready | **Python**: 3.10+ | **License**: MIT | **Phases**: 7/7 Complete | **Bugs Fixed**: 5/5
+**Status**: Alpha | **Python**: 3.10+ | **License**: MIT | **Phases**: 7/7 Complete | **Bugs Fixed**: 5/5
 
 ## 📊 Performance & Quality Metrics
 
 ### Input (Gutenberg EPUB)
-- **around-the-world.epub**: 45 spine items, 0 semantic headings, 40 NCX entries, flat markup
+- **around-the-world-in-80-days.epub**: 45 spine items, 0 semantic headings, 40 NCX entries, flat markup
 
 ### Output (After M2: Phases 0, 1, 5)
 - Phase 0 diagnosis complete
@@ -524,22 +524,6 @@ For issues, questions, or suggestions:
 4. **Test thoroughly** — Use reference books + F1 scoring
 5. **Update AGENTS.md** — Document conventions and quirks
 
-### Next Phases to Implement
-
-- **Phase 2** — Semantic upgrade (6-pass heading detection)
-- **Phase 4** — TOC rebuild (NCX + nav.xhtml generation)
-- **Phase 7** — Validation + F1 scoring
-
-### Running Tests During Development
-
-```powershell
-# Run integration tests
-.\run-integration-tests.ps1 -Verbose -SkipCleanup
-
-# Check specific phase
-.\run-integration-tests.ps1 -TestPhase 0 -Verbose
-```
-
 ## 📄 License
 
 MIT License — See LICENSE file for details.
@@ -555,11 +539,4 @@ MIT License — See LICENSE file for details.
 
 - **Issues**: GitHub Issues
 - **Discussions**: GitHub Discussions
-- **Documentation**: PLAN.md, AGENTS.md, inline code comments
-
----
-
-**Status**: Active development  
-**Latest Milestone**: M2 (Phase 1 + Phase 5 complete)  
-**Next**: M3 (Phase 2 — Semantic Upgrade)  
-**Version**: 0.1.0-alpha
+- **Documentation**: AGENTS.md

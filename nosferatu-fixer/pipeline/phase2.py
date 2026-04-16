@@ -91,17 +91,26 @@ class Phase2Analyzer(EPUBPhaseBase):
         except Exception as e:
             self.report.validation_errors.append(f"Custom analysis failed: {str(e)}")
             return False
+    
+    def _parse_opf(self) -> None:
+        """Parse OPF file to extract spine items and manifest."""
+        try:
+            # Call parent to set opf_path, opf_base, opf_soup
+            super()._parse_opf()
+            
+            if not self.opf_soup:
+                return
             
             # Get all manifest items
             manifest = {}
-            for item in soup.find_all("item"):
+            for item in self.opf_soup.find_all("item"):
                 manifest[item.get("id", "")] = {
                     "href": item.get("href", ""),
                     "media_type": item.get("media-type", "")
                 }
             
             # Get spine order
-            spine = soup.find("spine")
+            spine = self.opf_soup.find("spine")
             if spine:
                 for itemref in spine.find_all("itemref"):
                     item_id = itemref.get("idref", "")
@@ -277,10 +286,54 @@ class Phase2Analyzer(EPUBPhaseBase):
         
         return headings
 
+    def _extract_calibre_font_classes(self, soup: BeautifulSoup) -> dict[str, float]:
+        """Extract Calibre CSS classes with largest font-size (likely headings).
+        
+        Calibre generates: .calibre1 { font-size: 1.5em; }
+        We want to identify which class sizes suggest headings.
+        
+        Returns:
+            Dict mapping class_name -> font_size_value (as float in em/px)
+        """
+        class_to_size = {}
+        
+        # Find all style tags
+        for style_tag in soup.find_all("style"):
+            if not style_tag.string:
+                continue
+            
+            # Match: .calibreN { ... font-size: XXX ... }
+            pattern = r'\.calibre(\d+)\s*\{[^}]*font-size\s*:\s*([^;]+)'
+            matches = re.findall(pattern, style_tag.string)
+            
+            for class_num, size_str in matches:
+                class_name = f"calibre{class_num}"
+                # Extract numeric value (1.5em → 1.5, 16px → 16, etc)
+                try:
+                    size_value = float(re.search(r'[\d.]+', size_str).group())
+                    class_to_size[class_name] = size_value
+                except (AttributeError, ValueError):
+                    pass
+        
+        return class_to_size
+    
     def _pass_css_class(self, soup: BeautifulSoup, href: str) -> list[TocEntry]:
-        """PASS 2: Find tags with heading-like CSS classes."""
+        """PASS 2: Find tags with heading-like CSS classes (semantic + Calibre).
+        
+        Checks:
+        - Standard semantic classes (chapter, heading, title, etc)
+        - Calibre classes by font-size heuristic (largest classes likely headings)
+        """
         headings = []
         first_match = True
+        
+        # Extract Calibre class font sizes for this file
+        calibre_classes = self._extract_calibre_font_classes(soup)
+        
+        # Identify largest Calibre class (assume that's headings/titles)
+        largest_calibre_class = None
+        if calibre_classes:
+            largest_calibre_class = max(calibre_classes, key=lambda c: calibre_classes[c])
         
         for tag in soup.find_all(["p", "div", "span"]):
             classes = tag.get("class", [])
@@ -289,7 +342,14 @@ class Phase2Analyzer(EPUBPhaseBase):
             
             class_str = " ".join(classes)
             
-            if not self.HEADING_CLASS_PATTERN.search(class_str):
+            # Check 1: Semantic heading classes (original logic)
+            is_semantic = self.HEADING_CLASS_PATTERN.search(class_str)
+            
+            # Check 2: Calibre largest-font class (new logic)
+            is_largest_calibre = (largest_calibre_class and 
+                                 largest_calibre_class in classes)
+            
+            if not (is_semantic or is_largest_calibre):
                 continue
             
             text = self._extract_clean_heading_text(tag)
@@ -314,29 +374,60 @@ class Phase2Analyzer(EPUBPhaseBase):
         
         return headings
 
+    def _is_mostly_bold(self, element: Tag) -> tuple[bool, float]:
+        """Check if element has bold/strong content at 40%+ ratio (allows nesting).
+        
+        Handles cases like: <i><b>text</b></i>, <span><b>text</b></span>
+        
+        Returns:
+            Tuple of (is_mostly_bold, ratio) where ratio is boldness percentage
+        """
+        text_content = element.get_text(strip=True)
+        if not text_content:
+            return False, 0.0
+        
+        # Find all bold/strong tags
+        bold_tags = element.find_all(["b", "strong"])
+        if not bold_tags:
+            return False, 0.0
+        
+        # Calculate total bold text length
+        bold_text_total = sum(len(tag.get_text()) for tag in bold_tags)
+        bold_ratio = bold_text_total / len(text_content)
+        
+        # Criteria: 40%+ bold content is "mostly bold"
+        return bold_ratio >= 0.4, bold_ratio
+    
     def _pass_bold_heading(self, soup: BeautifulSoup, href: str) -> list[TocEntry]:
-        """PASS 3: Find <p><b>text</b></p> patterns as headings."""
+        """PASS 3: Find bold-as-heading patterns including nested formatting.
+        
+        Handles:
+        - Simple: <p><b>text</b></p>
+        - Nested: <p><i><b>text</b></i></p>
+        - Wrapped: <p><span><b>text</b></span></p>
+        - Top-level: <i><b>text</b></i> (outside <p>)
+        
+        Criteria: 40%+ bold content, <150 chars, isolated
+        """
         headings = []
         
+        # First pass: check regular <p> tags
         for tag in soup.find_all("p"):
-            # Check if <p> contains exactly one child <b> or <strong>
-            children = [child for child in tag.children if not isinstance(child, NavigableString) or str(child).strip()]
+            text = self._extract_clean_heading_text(tag)
             
-            if len(children) != 1:
-                continue
-            
-            child = children[0]
-            if not isinstance(child, Tag):
-                continue
-            
-            if child.name not in ["b", "strong"]:
-                continue
-            
-            text = self._extract_clean_heading_text(child)
+            # Filter: must be short and contain some text
             if not text or len(text) > 150:
                 continue
             
+            # Check for mostly-bold content (flexible nesting)
+            is_bold, ratio = self._is_mostly_bold(tag)
+            if not is_bold:
+                continue  # Not mostly bold
+            
             anchor = self._extract_anchor(tag)
+            
+            # Confidence decreases with nesting depth (more markup = less certain it's a heading)
+            confidence = 0.75 if ratio >= 0.8 else 0.70 if ratio >= 0.6 else 0.65
             
             headings.append(TocEntry(
                 title=text,
@@ -345,13 +436,107 @@ class Phase2Analyzer(EPUBPhaseBase):
                 anchor=anchor,
                 level=2,
                 source="bold_paragraph",
-                confidence=0.7
+                confidence=confidence
             ))
+        
+        # If found headings in <p>, return them
+        if headings:
+            return headings
+        
+        # Second pass: check top-level formatting (outside <p>) at document start
+        # Handles: <i><b>Title</b></i> before any <p> tags
+        body = soup.find("body")
+        if body:
+            # Look at first few direct children of body (before content)
+            for idx, child in enumerate(body.children):
+                # Stop after first 3 elements or if we hit a <p>
+                if idx > 3 or (isinstance(child, Tag) and child.name == "p"):
+                    break
+                
+                if not isinstance(child, Tag):
+                    continue
+                
+                # Skip if not a container-like element
+                if child.name not in ["i", "em", "b", "strong", "span", "div"]:
+                    continue
+                
+                text = self._extract_clean_heading_text(child)
+                if not text or len(text) > 150:
+                    continue
+                
+                # Check if mostly bold
+                is_bold, ratio = self._is_mostly_bold(child)
+                if not is_bold and child.name not in ["b", "strong"]:
+                    continue
+                
+                # This looks like a heading
+                confidence = 0.72 if ratio >= 0.6 else 0.65
+                
+                headings.append(TocEntry(
+                    title=text,
+                    href=href,
+                    file_part=href.split("#")[0],
+                    anchor=None,
+                    level=1,  # Top-level formatting likely title
+                    source="bold_paragraph_toplevel",
+                    confidence=confidence
+                ))
         
         return headings
 
+    def _is_title_case(self, text: str) -> bool:
+        """Check if text is title case or title-like.
+        
+        Examples:
+        - "The Duke And I" → True (all words capitalized, multiple words)
+        - "Prologo" → True (single word, capitalized)
+        - "the duke and i" → False (mostly lowercase)
+        - "THIS IS ALL CAPS" → False (not title case, too uniform)
+        
+        Args:
+            text: Text to check
+            
+        Returns:
+            True if text appears to be title cased
+        """
+        if not text:
+            return False
+        
+        words = text.split()
+        if not words:
+            return False
+        
+        # Single word: must be capitalized + not all caps
+        if len(words) == 1:
+            is_capitalized = words[0] and words[0][0].isupper()
+            is_all_caps = words[0].isupper() and len(words[0]) > 1
+            return is_capitalized and not is_all_caps
+        
+        # Multiple words check 1: 70%+ words are capitalized
+        capitalized_count = sum(1 for w in words if w and w[0].isupper())
+        capitalized_ratio = capitalized_count / len(words)
+        
+        if capitalized_ratio >= 0.7:
+            # Multiple words, mostly capitalized: it's title-like
+            # This catches "The Duke And I" and "A Short Title"
+            
+            # Additional check: shouldn't be ALL CAPS (that's screaming text, not a title)
+            fully_uppercase_words = sum(1 for w in words if w.isupper() and len(w) > 1)
+            fully_uppercase_ratio = fully_uppercase_words / len(words) if words else 0
+            
+            # Allow if not more than 30% all-caps words
+            if fully_uppercase_ratio < 0.3:
+                return True
+        
+        return False
+    
     def _pass_uppercase_heuristic(self, soup: BeautifulSoup, href: str) -> list[TocEntry]:
-        """PASS 4: First <p> with >70% uppercase letters as heading."""
+        """PASS 4: First paragraph with ALL-CAPS or Title Case as heading.
+        
+        Detects:
+        - ALL UPPERCASE text (>70% uppercase letters)
+        - Title Case ("The Duke And I", "Prologo")
+        """
         for tag in soup.find_all("p"):
             
             # Filter out very long candidates
@@ -359,25 +544,35 @@ class Phase2Analyzer(EPUBPhaseBase):
             if not text or len(text) > 120:
                 continue
             
-            # Count uppercase/lowercase letters
+            # Check 1: ALL-CAPS heuristic (original)
             alpha_chars = [c for c in text if c.isalpha()]
-            if not alpha_chars:
-                continue
-            
-            uppercase_count = sum(1 for c in alpha_chars if c.isupper())
-            uppercase_ratio = uppercase_count / len(alpha_chars)
-            
-            if uppercase_ratio > 0.70:
-                anchor = self._extract_anchor(tag)
+            if alpha_chars:
+                uppercase_count = sum(1 for c in alpha_chars if c.isupper())
+                uppercase_ratio = uppercase_count / len(alpha_chars)
                 
+                if uppercase_ratio > 0.70:
+                    anchor = self._extract_anchor(tag)
+                    return [TocEntry(
+                        title=text,
+                        href=f"{href}#{anchor}" if anchor else href,
+                        file_part=href.split("#")[0],
+                        anchor=anchor,
+                        level=2,
+                        source="uppercase_heuristic",
+                        confidence=0.55
+                    )]
+            
+            # Check 2: Title Case heuristic (new)
+            if self._is_title_case(text):
+                anchor = self._extract_anchor(tag)
                 return [TocEntry(
                     title=text,
                     href=f"{href}#{anchor}" if anchor else href,
                     file_part=href.split("#")[0],
                     anchor=anchor,
                     level=2,
-                    source="uppercase_heuristic",
-                    confidence=0.55
+                    source="title_case_heuristic",
+                    confidence=0.50  # Title case lower confidence than uppercase
                 )]
         
         return []
@@ -521,6 +716,9 @@ class Phase2Analyzer(EPUBPhaseBase):
         """
         Inject semantic structure with epub:type attributes.
         
+        For headings from pass 5 (title) or pass 6 (NCX), create h1 at document start.
+        For headings found in body, convert existing elements to semantic tags.
+        
         Args:
             file_path: Path to XHTML file
             headings: List of detected headings
@@ -532,24 +730,40 @@ class Phase2Analyzer(EPUBPhaseBase):
             parser = select_parser(file_path.name)
             soup = BeautifulSoup(content, parser)
             
-            # For each heading, wrap in section with appropriate epub:type
+            # For each heading, either convert existing element or create new h-tag
             for heading in headings:
-                # Find the heading tag by its text or anchor
                 heading_tag = None
                 
-                if heading.anchor:
-                    heading_tag = soup.find(id=heading.anchor)
+                # Only try to find existing elements for headings detected in body
+                if heading.source in ["bold_paragraph", "css_class", "uppercase_heuristic", "semantic_heading", "bold_paragraph_toplevel"]:
+                    # Try to find by anchor
+                    if heading.anchor:
+                        heading_tag = soup.find(id=heading.anchor)
+                    
+                    # Try to find by text
+                    if not heading_tag:
+                        for candidate in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "span", "i", "em", "b", "strong"]):
+                            candidate_text = self._extract_clean_heading_text(candidate)
+                            if candidate_text == heading.title:
+                                heading_tag = candidate
+                                break
                 
-                if not heading_tag:
-                    # Search by text
-                    for candidate in soup.find_all(["h1", "h2", "h3", "h4", "h5", "h6", "p", "div"]):
-                        if self._extract_clean_heading_text(candidate) == heading.title:
-                            heading_tag = candidate
-                            break
-                
+                # If found existing element, convert it
                 if heading_tag:
-                    # Determine epub:type from title pattern
+                    # Determine epub:type
                     epub_type = self._determine_epub_type(heading.title)
+                    
+                    # For top-level formatting elements (i, em, b, strong, span), wrap with h1
+                    if heading_tag.name in ["i", "em", "b", "strong", "span"]:
+                        new_heading = soup.new_tag(f"h{heading.level}")
+                        new_heading.string = heading_tag.get_text()
+                        
+                        if heading_tag.get("id"):
+                            new_heading["id"] = heading_tag["id"]
+                        
+                        # Use replace_with() - correct BeautifulSoup method!
+                        heading_tag.replace_with(new_heading)
+                        heading_tag = new_heading
                     
                     # Wrap in section if not already wrapped
                     if heading_tag.parent.name != "section":
@@ -560,10 +774,35 @@ class Phase2Analyzer(EPUBPhaseBase):
                     # Convert to semantic heading if needed
                     if heading_tag.name not in ["h1", "h2", "h3", "h4", "h5", "h6"]:
                         new_heading = soup.new_tag(f"h{heading.level}")
-                        new_heading.string = heading_tag.string
+                        new_heading.string = heading_tag.get_text()
                         if heading_tag.get("id"):
                             new_heading["id"] = heading_tag["id"]
-                        heading_tag.replace(new_heading)
+                        heading_tag.replace_with(new_heading)
+                
+                else:
+                    # Heading from non-body source (document_title, ncx_fallback):
+                    # Create an h1 at start of body
+                    body = soup.find("body")
+                    if body and heading.source in ["document_title", "ncx_fallback"]:
+                        new_heading = soup.new_tag(f"h{heading.level}")
+                        new_heading.string = heading.title
+                        
+                        # Generate anchor if needed
+                        anchor = self._slugify(heading.title, self.existing_ids)
+                        new_heading["id"] = anchor
+                        self.existing_ids.add(anchor)
+                        
+                        # Insert at start of body (after any empty text nodes)
+                        first_elem = None
+                        for child in body.children:
+                            if isinstance(child, Tag):
+                                first_elem = child
+                                break
+                        
+                        if first_elem:
+                            new_heading.insert_before(first_elem)
+                        else:
+                            body.append(new_heading)
             
             # Write back to file
             with open(file_path, "wb") as f:

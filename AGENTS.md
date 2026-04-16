@@ -7,9 +7,9 @@ All 7 pipeline phases fully implemented and tested. Full test coverage, performa
 ## Project Structure
 
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── main.py                              # CLI entry point
-├── toc_fixer/                           # Main package
+├── nosferatu-fixer/                           # Main package
 │   ├── __init__.py
 │   ├── core/                            # Core utilities and models
 │   │   ├── __init__.py
@@ -28,9 +28,6 @@ toc-fixer/
 │       └── phase7.py                   # Phase 7: Validation ✅
 ├── README.md                            # GitHub-ready documentation
 ├── AGENTS.md                            # This file
-├── PLAN.md                              # Full technical specification
-├── BUG_FIX_SUMMARY.md                  # Critical bug fixes (Bug-4, Bug-5)
-└── FILE_ORGANIZATION.md                # File structure and organization guide
 ```
 
 ## Import Conventions
@@ -214,7 +211,7 @@ Intermediate EPUB files are organized in a `tmp/` directory for clean workspace:
 
 **Normal mode (after execution)**:
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── input.epub                 # Original input
 ├── input_clean.epub           # Final output
 └── reports/
@@ -225,7 +222,7 @@ Note: `tmp/` directory is removed after execution when empty.
 
 **Debug mode (with `--debug-output` flag)**:
 ```
-toc-fixer/
+nosferatu-fixer/
 ├── input.epub                 # Original input
 ├── input_clean.epub           # Final output
 ├── tmp/                       # Preserved in debug mode

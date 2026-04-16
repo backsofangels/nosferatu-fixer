@@ -4,10 +4,11 @@ import re
 from pathlib import Path
 from typing import Optional
 from xml.etree import ElementTree as ET
+from zipfile import ZipFile
 
 from bs4 import BeautifulSoup
 
-from ..core import EPUBPhaseBase, NavNode, PipelineReport, TocEntry, build_zip_key, safe_read, select_parser
+from ..core import EPUBPhaseBase, PipelineReport, NavNode, TocEntry, build_zip_key, safe_read, select_parser
 
 
 class Phase4TOCBuilder(EPUBPhaseBase):
